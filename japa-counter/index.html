@@ -4,12 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Japa Mala Counter</title>
 
     <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
-
 </head>
 
 <body>
@@ -20,26 +17,47 @@
 
         <h1>📿 Japa Mala Counter</h1>
 
-        <div id="timer">00:00</div>
+        <div>
+            <span id="timer">00:00</span>
+            <button id="stopBtn">Stop</button>
+        </div>
 
+
+        <!-- Deity -->
+        <div class="deity-section">
+            <input type="text" id="deityName" placeholder="Enter Deity Name">
+
+            <label class="upload-btn">
+                Upload Image
+                <input type="file" id="deityImage" accept="image/*">
+            </label>
+        </div>
+
+        <!-- Mala -->
         <div class="mala-wrapper" id="tapArea">
-            <div id="malaCircle"></div>
-            <div id="centerCount">0</div>
+
+            <div class="circle-container">
+
+                <!-- deity inside -->
+                <img id="circleImage" />
+
+                <div id="malaCircle"></div>
+
+                <div id="centerCount">0</div>
+
+            </div>
+
         </div>
 
         <div class="stats">
-
             <p>Total Count: <span id="total">0</span></p>
             <p>Mala Completed: <span id="mala">0</span></p>
             <p>🔥 Daily Streak: <span id="streak">0</span></p>
-
         </div>
 
         <div class="buttons">
-
-            <button>Reset</button>
-            <button>Dark Mode</button>
-
+            <button id="resetBtn">Reset</button>
+            <button id="darkBtn">Dark Mode</button>
         </div>
 
     </div>
