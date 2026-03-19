@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
 
     const beadTarget = 108;
 
@@ -6,82 +6,144 @@ document.addEventListener("DOMContentLoaded", function () {
     let mala = 0;
     let totalCount = 0;
 
-    let startTime;
+    /* TIMER STATE */
+    let timer = 0;
+    let timerInterval = null;
     let timerStarted = false;
-    let timerInterval;
-
-    /* ELEMENTS */
 
     const malaCircle = document.getElementById("malaCircle");
-    const tapArea = document.getElementById("tapArea");
+    const centerCount = document.getElementById("centerCount");
+    const totalEl = document.getElementById("total");
+    const malaEl = document.getElementById("mala");
+    const timerEl = document.getElementById("timer");
+    const stopBtn = document.getElementById("stopBtn");
 
-    /* SOUND */
-
-    const clickSound = new Audio("music.mp3");
-
-    /* CREATE 108 BEADS */
-
-    for (let i = 0; i < beadTarget; i++) {
-
-        let bead = document.createElement("div");
-
-        bead.classList.add("bead");
-
-        if (i === 107) bead.classList.add("guru");
-
-        let angle = (i / beadTarget) * 2 * Math.PI;
-
-        let radius = 140;
-
-        let x = 160 + radius * Math.cos(angle);
-        let y = 160 + radius * Math.sin(angle);
-
-        bead.style.left = x + "px";
-        bead.style.top = y + "px";
-
-        malaCircle.appendChild(bead);
-
+    if (!malaCircle || !centerCount || !totalEl || !malaEl || !timerEl) {
+        console.error("Required elements not found");
+        return;
     }
-
-    const beads = document.querySelectorAll(".bead");
-
-    beads[0].classList.add("active");
 
     /* TIMER */
-
     function startTimer() {
+        if (timerStarted) return;
+
+        timerStarted = true;
 
         timerInterval = setInterval(() => {
+            timer++;
 
-            let diff = Date.now() - startTime;
+            let minutes = String(Math.floor(timer / 60)).padStart(2, "0");
+            let seconds = String(timer % 60).padStart(2, "0");
 
-            let sec = Math.floor(diff / 1000) % 60;
-            let min = Math.floor(diff / 60000);
-
-            document.getElementById("timer").innerText =
-                String(min).padStart(2, "0") + ":" +
-                String(sec).padStart(2, "0");
-
+            timerEl.innerText = `${minutes}:${seconds}`;
         }, 1000);
-
     }
 
-    /* TAP EVENT */
+    function stopTimer() {
+        clearInterval(timerInterval);
+        timerStarted = false;
+    }
 
-    tapArea.addEventListener("click", (e) => {
+    function updateStopBtnUI() {
+        if (!stopBtn) return;
 
-        if (e.target.tagName === "BUTTON") return;
+        if (timerStarted) {
+            stopBtn.classList.add("running");
+            stopBtn.classList.remove("stopped");
+            stopBtn.innerText = "Stop";
+        } else {
+            stopBtn.classList.add("stopped");
+            stopBtn.classList.remove("running");
+            stopBtn.innerText = "Start";
+        }
+    }
 
-        if (!timerStarted) {
+    /* STOP BUTTON TOGGLE */
+    if (stopBtn) {
+        stopBtn.addEventListener("click", () => {
 
-            startTime = Date.now();
-            startTimer();
-            timerStarted = true;
+            if (timerStarted) {
+                stopTimer();
+            } else {
+                startTimer();
+            }
 
+            updateStopBtnUI();
+        });
+    }
+
+    updateStopBtnUI();
+
+    /* SOUND */
+    const audioPool = [];
+    function playClick() {
+        let sound = audioPool.find(a => a.paused);
+
+        if (!sound) {
+            sound = new Audio("music.mp3");
+            audioPool.push(sound);
         }
 
-        clickSound.currentTime = 0;
-        clickSound.play().catch(() => { });
+        sound.currentTime = 0;
+        sound.play().catch(() => { });
+    }
+
+    /* CREATE BEADS */
+    function createBeads() {
+
+        malaCircle.innerHTML = "";
+
+        let size = malaCircle.offsetWidth || 300;
+        let center = size / 2;
+        let radius = size * 0.44;
+
+        for (let i = 0; i < beadTarget; i++) {
+
+            let bead = document.createElement("div");
+            bead.className = "bead";
+
+            if (i === 107) bead.classList.add("guru");
+
+            let angle = (i / beadTarget) * 2 * Math.PI;
+
+            let x = center + radius * Math.cos(angle);
+            let y = center + radius * Math.sin(angle);
+
+            bead.style.left = x + "px";
+            bead.style.top = y + "px";
+
+            malaCircle.appendChild(bead);
+        }
+
+        const first = malaCircle.querySelector(".bead");
+        if (first) first.classList.add("active");
+    }
+
+    createBeads();
+    window.addEventListener("resize", createBeads);
+
+    function getBeads() {
+        return malaCircle.querySelectorAll(".bead");
+    }
+
+    /* FULL SCREEN TAP */
+    document.addEventListener("pointerdown", (e) => {
+
+        if (
+            e.target.closest("button") ||
+            e.target.tagName === "INPUT" ||
+            e.target.closest(".deity-section") ||
+            e.target.closest(".buttons")
+        ) return;
+
+        e.preventDefault(); // ✅ FIXED placement
+
+        startTimer();
+
+        const beads = getBeads();
+        if (!beads.length) return;
+
+        playClick();
 
         beads[currentBead].classList.remove("active");
         beads[currentBead].classList.add("done");
@@ -90,103 +152,87 @@ document.addEventListener("DOMContentLoaded", function () {
         totalCount++;
 
         if (currentBead >= beadTarget) {
-
             mala++;
             currentBead = 0;
-
             beads.forEach(b => b.classList.remove("done"));
-
         }
 
         beads[currentBead].classList.add("active");
 
-        document.getElementById("centerCount").innerText = currentBead;
-        document.getElementById("total").innerText = totalCount;
-        document.getElementById("mala").innerText = mala;
+        centerCount.innerText = currentBead;
+        totalEl.innerText = totalCount;
+        malaEl.innerText = mala;
 
-        updateStreak();
-
+        showFloatingText(e);
     });
 
+    /* FLOATING TEXT */
+    function showFloatingText(e) {
+
+        const nameInput = document.getElementById("deityName");
+        const name = nameInput ? nameInput.value : "";
+
+        let span = document.createElement("span");
+        span.className = "floating";
+        span.innerText = name || "🙏";
+
+        span.style.left = e.clientX + "px";
+        span.style.top = e.clientY + "px";
+
+        document.body.appendChild(span);
+
+        setTimeout(() => span.remove(), 1500);
+    }
+
     /* RESET */
+    const resetBtn = document.getElementById("resetBtn");
+    if (resetBtn) {
+        resetBtn.addEventListener("click", () => {
 
-    function resetCounter() {
+            currentBead = 0;
+            mala = 0;
+            totalCount = 0;
 
-        currentBead = 0;
-        mala = 0;
-        totalCount = 0;
+            timer = 0;
+            timerEl.innerText = "00:00";
 
-        beads.forEach(b => {
-            b.classList.remove("done", "active");
+            stopTimer();
+            updateStopBtnUI();
+
+            createBeads();
+
+            centerCount.innerText = 0;
+            totalEl.innerText = 0;
+            malaEl.innerText = 0;
         });
-
-        beads[0].classList.add("active");
-
-        document.getElementById("centerCount").innerText = 0;
-        document.getElementById("total").innerText = 0;
-        document.getElementById("mala").innerText = 0;
-
-        clearInterval(timerInterval);
-        timerStarted = false;
-
-        document.getElementById("timer").innerText = "00:00";
-
     }
 
     /* DARK MODE */
-
-    function toggleDark() {
-        document.body.classList.toggle("dark");
+    const darkBtn = document.getElementById("darkBtn");
+    if (darkBtn) {
+        darkBtn.addEventListener("click", () => {
+            document.body.classList.toggle("dark");
+        });
     }
 
-    /* BUTTON EVENTS */
+    /* IMAGE UPLOAD */
+    const imageInput = document.getElementById("deityImage");
+    const circleImage = document.getElementById("circleImage");
 
-    document.querySelector(".buttons button:nth-child(1)")
-        .addEventListener("click", resetCounter);
+    if (imageInput && circleImage) {
+        imageInput.addEventListener("change", () => {
 
-    document.querySelector(".buttons button:nth-child(2)")
-        .addEventListener("click", toggleDark);
+            const file = imageInput.files[0];
+            if (!file) return;
 
-    /* DAILY STREAK */
+            const reader = new FileReader();
 
-    function updateStreak() {
+            reader.onload = (e) => {
+                circleImage.src = e.target.result;
+            };
 
-        let today = new Date().toDateString();
-
-        let last = localStorage.getItem("lastDate");
-        let streak = parseInt(localStorage.getItem("streak") || 0);
-
-        if (last !== today) {
-
-            let yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-
-            if (last === yesterday.toDateString()) {
-                streak++;
-            }
-            else {
-                streak = 1;
-            }
-
-            localStorage.setItem("streak", streak);
-            localStorage.setItem("lastDate", today);
-
-        }
-
-        document.getElementById("streak").innerText = streak;
-
-    }
-
-    updateStreak();
-
-    /* PWA */
-
-    if ("serviceWorker" in navigator) {
-
-        navigator.serviceWorker.register("service-worker.js")
-            .then(() => console.log("Service Worker Registered"))
-            .catch(err => console.log("SW Error:", err));
-
+            reader.readAsDataURL(file);
+        });
     }
 
 });
